@@ -55,10 +55,38 @@ Supported `--show` values for the Chakoteya provider:
         └── ...
 ```
 
+## API (M2)
+
+The same pipeline is exposed over HTTP. Run the server with `make dev` (or
+`uvicorn app.main:app --port 8080`) and drive it with curl:
+
+```bash
+# Kick off a scan — returns {"job_id": "..."}
+curl -s http://localhost:8080/scan -H 'content-type: application/json' -d '{
+  "folder": "/abs/path/to/rips/TNG-S03",
+  "series_key": "tng",
+  "season": 3,
+  "series_title": "Star Trek The Next Generation",
+  "year": 1987,
+  "tvdb_id": 71470,
+  "library_root": "/media/tv"
+}'
+
+# Poll status
+curl -s http://localhost:8080/jobs/$JOB_ID
+
+# Inspect the proposed Jellyfin mapping
+curl -s http://localhost:8080/jobs/$JOB_ID/results
+
+# Dry-run (default) or apply
+curl -s http://localhost:8080/jobs/$JOB_ID/apply \
+    -H 'content-type: application/json' -d '{"confirm": true}'
+```
+
 ## Roadmap
 
 - [x] **M1** — CLI prototype with Chakoteya provider and Jellyfin renamer
-- [ ] **M2** — FastAPI wrapper around the same logic
+- [x] **M2** — FastAPI wrapper around the same logic
 - [ ] **M3** — htmx web UI
 - [ ] **M4** — OpenSubtitles provider (works beyond Trek)
 - [ ] **M5** — PGS / VobSub OCR for Blu-ray rips without text subs

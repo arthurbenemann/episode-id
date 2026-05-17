@@ -1,4 +1,4 @@
-.PHONY: help install test lint fmt clean docker docker-test
+.PHONY: help install test lint fmt clean dev docker docker-test
 
 help:
 	@echo "Targets:"
@@ -6,12 +6,16 @@ help:
 	@echo "  test         run pytest"
 	@echo "  lint         run ruff check + format check"
 	@echo "  fmt          run ruff format"
+	@echo "  dev          run the FastAPI app with hot reload on :8080"
 	@echo "  clean        remove build artefacts and caches"
 	@echo "  docker       build the production docker image"
 	@echo "  docker-test  run the test suite inside docker"
 
 install:
 	pip install -e ".[dev]"
+
+dev:
+	uvicorn app.main:app --reload --host 0.0.0.0 --port 8080
 
 test:
 	pytest tests/
