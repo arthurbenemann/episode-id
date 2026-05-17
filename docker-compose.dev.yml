@@ -1,0 +1,17 @@
+services:
+  episode-id:
+    build: .
+    container_name: episode-id-dev
+    volumes:
+      - ./app:/app/app
+      - ${MEDIA_INPUT:-./media/input}:/media/input
+      - ${LIBRARY_ROOT:-./media/tv}:/media/tv
+    environment:
+      MEDIA_ROOT: /media/input
+      LIBRARY_ROOT: /media/tv
+    env_file:
+      - .env
+    # Override the entrypoint to drop into a shell for ad-hoc work.
+    entrypoint: ["/bin/bash"]
+    stdin_open: true
+    tty: true

@@ -1,0 +1,15 @@
+services:
+  episode-id:
+    image: ghcr.io/yourname/episode-id:latest
+    build: .
+    container_name: episode-id
+    volumes:
+      # The folder you ripped into — read-write so we can move files out.
+      - ${MEDIA_INPUT:-./media/input}:/media/input
+      # Your Jellyfin TV library root — read-write so we can place files in.
+      - ${LIBRARY_ROOT:-./media/tv}:/media/tv
+    environment:
+      MEDIA_ROOT: /media/input
+      LIBRARY_ROOT: /media/tv
+    env_file:
+      - .env
