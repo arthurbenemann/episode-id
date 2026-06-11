@@ -1,0 +1,59 @@
+{% macro badge(conf) -%}
+{%- if conf >= 80 -%}
+<span class="badge badge-green">{{ '%.0f' % conf }}</span>
+{%- elif conf >= 60 -%}
+<span class="badge badge-yellow">{{ '%.0f' % conf }}</span>
+{%- else -%}
+<span class="badge badge-red">{{ '%.0f' % conf }}</span>
+{%- endif -%}
+{%- endmacro %}
+
+<div class="results">
+    <h2>Proposed renames</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Source</th>
+                <th>Destination</th>
+                <th>Confidence</th>
+                <th>Review</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for m in matches %}
+            <tr>
+                <td class="path">{{ m.source.rsplit('/', 1)[-1] }}</td>
+                <td class="path">{{ m.destination }}</td>
+                <td>{{ badge(m.confidence) }}</td>
+                <td>{% if m.needs_review %}<span class="review-dot" title="Low confidence or close runner-up">●</span>{% endif %}</td>
+            </tr>
+            {% if m.alternates %}
+            <tr class="alternates">
+                <td></td>
+                <td colspan="3">
+                    <details>
+                        <summary>Alternates</summary>
+                        <ul>
+                        {% for alt in m.alternates %}
+                            <li>S{{ '%02d' % alt.season }}E{{ '%02d' % alt.episode }} — {{ alt.title }} <span class="muted">({{ '%.0f' % alt.confidence }})</span></li>
+                        {% endfor %}
+                        </ul>
+                    </details>
+                </td>
+            </tr>
+            {% endif %}
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div id="apply-result" class="actions">
+        <form hx-post="/ui/jobs/{{ job.id }}/apply" hx-target="#apply-result" hx-swap="outerHTML">
+            <button type="submit">Dry-run</button>
+        </form>
+        <form hx-post="/ui/jobs/{{ job.id }}/apply" hx-target="#apply-result" hx-swap="outerHTML"
+              hx-confirm="Move {{ matches|length }} file(s) into the library?">
+            <input type="hidden" name="confirm" value="on">
+            <button type="submit">Apply</button>
+        </form>
+    </div>
+</div>

@@ -3,6 +3,8 @@ services:
     image: ghcr.io/yourname/episode-id:latest
     build: .
     container_name: episode-id
+    ports:
+      - "8080:8080"
     volumes:
       # The folder you ripped into — read-write so we can move files out.
       - ${MEDIA_INPUT:-./media/input}:/media/input

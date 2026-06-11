@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block content %}
+<form hx-post="/ui/scan" hx-target="#job" hx-swap="innerHTML">
+    <fieldset>
+        <legend>Scan a folder</legend>
+
+        <label>
+            Folder
+            <input type="text" name="folder" value="{{ defaults.media_root }}" required>
+        </label>
+
+        <label>
+            Show
+            <select name="series_key" required>
+                {% for key in series_keys %}
+                <option value="{{ key }}"{% if key == 'tng' %} selected{% endif %}>{{ key }}</option>
+                {% endfor %}
+            </select>
+        </label>
+
+        <label>
+            Season
+            <input type="number" name="season" min="0" value="1" required>
+        </label>
+
+        <label>
+            Series title
+            <input type="text" name="series_title" required>
+        </label>
+
+        <label>
+            Year (optional)
+            <input type="number" name="year" min="1900" max="2100">
+        </label>
+
+        <label>
+            TVDB id (optional)
+            <input type="number" name="tvdb_id" min="1">
+        </label>
+
+        <label>
+            Library root
+            <input type="text" name="library_root" value="{{ defaults.library_root }}">
+        </label>
+
+        <label class="checkbox">
+            <input type="checkbox" name="include_provider_id"{% if defaults.include_provider_id %} checked{% endif %}>
+            Include [tvdbid-NNN] in the series folder name
+        </label>
+
+        <button type="submit">Scan</button>
+    </fieldset>
+</form>
+
+<div id="job"></div>
+{% endblock %}

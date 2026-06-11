@@ -1,0 +1,209 @@
+:root {
+    color-scheme: light dark;
+    --fg: #1a1a1a;
+    --bg: #ffffff;
+    --border: #dddddd;
+    --muted: #666666;
+    --accent: #2563eb;
+    --row-alt: #f5f5f5;
+    --green: #16a34a;
+    --yellow: #ca8a04;
+    --red: #dc2626;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --fg: #e5e5e5;
+        --bg: #1a1a1a;
+        --border: #333333;
+        --muted: #999999;
+        --row-alt: #242424;
+    }
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    color: var(--fg);
+    background: var(--bg);
+    margin: 0;
+    padding: 0;
+    line-height: 1.5;
+}
+
+header,
+main {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 1rem;
+}
+
+header h1 {
+    margin: 0;
+}
+
+.tagline {
+    color: var(--muted);
+    margin-top: 0.25rem;
+}
+
+fieldset {
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    padding: 1rem 1.25rem;
+}
+
+legend {
+    padding: 0 0.5rem;
+    font-weight: 600;
+}
+
+label {
+    display: block;
+    margin-bottom: 0.75rem;
+    font-weight: 500;
+}
+
+label.checkbox {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 400;
+}
+
+input[type="text"],
+input[type="number"],
+select {
+    display: block;
+    width: 100%;
+    margin-top: 0.25rem;
+    padding: 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: 0.25rem;
+    background: var(--bg);
+    color: var(--fg);
+    font: inherit;
+}
+
+button {
+    padding: 0.5rem 1rem;
+    border: 1px solid transparent;
+    border-radius: 0.25rem;
+    background: var(--accent);
+    color: white;
+    cursor: pointer;
+    font: inherit;
+    font-weight: 500;
+}
+
+button:hover {
+    opacity: 0.9;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1rem;
+}
+
+th,
+td {
+    text-align: left;
+    padding: 0.5rem;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+}
+
+tbody tr:nth-child(4n+3) {
+    background: var(--row-alt);
+}
+
+td.path {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    word-break: break-all;
+    font-size: 0.875rem;
+}
+
+.badge {
+    display: inline-block;
+    padding: 0.125rem 0.5rem;
+    border-radius: 0.25rem;
+    color: white;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+.badge-green {
+    background: var(--green);
+}
+
+.badge-yellow {
+    background: var(--yellow);
+}
+
+.badge-red {
+    background: var(--red);
+}
+
+.review-dot {
+    color: var(--red);
+    font-size: 1.25rem;
+    line-height: 1;
+}
+
+.error,
+.progress,
+.applied {
+    margin-top: 1rem;
+    padding: 1rem;
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+}
+
+.error {
+    border-color: var(--red);
+}
+
+.applied {
+    border-color: var(--green);
+}
+
+.actions {
+    margin-top: 1rem;
+    display: flex;
+    gap: 0.5rem;
+}
+
+.actions form {
+    display: inline;
+}
+
+details {
+    color: var(--muted);
+    font-size: 0.875rem;
+}
+
+details ul {
+    margin: 0.5rem 0 0;
+    padding-left: 1.5rem;
+}
+
+.muted {
+    color: var(--muted);
+}
+
+tr.alternates td {
+    border-bottom: 1px solid var(--border);
+    padding-top: 0;
+}
+
+code {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    background: var(--row-alt);
+    padding: 0.125rem 0.375rem;
+    border-radius: 0.25rem;
+    font-size: 0.875rem;
+}
