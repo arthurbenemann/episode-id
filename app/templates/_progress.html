@@ -1,0 +1,8 @@
+<div class="progress"
+     hx-get="/ui/jobs/{{ job.id }}/progress"
+     hx-trigger="every 1s"
+     hx-swap="outerHTML">
+    <h2>Scanning</h2>
+    <p>Job <code>{{ job.id[:12] }}</code> — stage: <strong>{{ job.progress.stage }}</strong></p>
+    <p>Files: {{ job.progress.files_done }} / {{ job.progress.files_total }}</p>
+</div>
