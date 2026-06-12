@@ -8,12 +8,19 @@
 {%- endif -%}
 {%- endmacro %}
 
+{% set flagged = matches | selectattr('needs_review') | list | length %}
 <div class="results">
     <h2>Proposed renames</h2>
+    <p class="summary">
+        <strong>{{ matches|length }}</strong> file{{ 's' if matches|length != 1 }} matched{% if flagged %} ·
+        <strong>{{ flagged }}</strong> flagged for review — check the alternates before applying{% else %} ·
+        all above the review threshold{% endif %}.
+    </p>
     <table>
         <thead>
             <tr>
                 <th>Source</th>
+                <th>Episode</th>
                 <th>Destination</th>
                 <th>Confidence</th>
                 <th>Review</th>
@@ -21,21 +28,26 @@
         </thead>
         <tbody>
             {% for m in matches %}
+            {% set dest_parts = m.destination.rsplit('/', 1) %}
             <tr>
                 <td class="path">{{ m.source.rsplit('/', 1)[-1] }}</td>
-                <td class="path">{{ m.destination }}</td>
+                <td>
+                    <span class="ep-chip">S{{ '%02d' % m.season }}E{{ '%02d' % m.episode }}</span>
+                    <span class="ep-title">{{ m.episode_title }}</span>
+                </td>
+                <td class="path"><span class="path-dir">{{ dest_parts[0] }}/</span><span class="path-file">{{ dest_parts[-1] }}</span></td>
                 <td>{{ badge(m.confidence) }}</td>
                 <td>{% if m.needs_review %}<span class="review-dot" title="Low confidence or close runner-up">●</span>{% endif %}</td>
             </tr>
             {% if m.alternates %}
             <tr class="alternates">
                 <td></td>
-                <td colspan="3">
+                <td colspan="4">
                     <details>
                         <summary>Alternates</summary>
                         <ul>
                         {% for alt in m.alternates %}
-                            <li>S{{ '%02d' % alt.season }}E{{ '%02d' % alt.episode }} — {{ alt.title }} <span class="muted">({{ '%.0f' % alt.confidence }})</span></li>
+                            <li><span class="ep-chip">S{{ '%02d' % alt.season }}E{{ '%02d' % alt.episode }}</span> {{ alt.title }} <span class="muted">({{ '%.0f' % alt.confidence }})</span></li>
                         {% endfor %}
                         </ul>
                     </details>
@@ -48,12 +60,12 @@
 
     <div id="apply-result" class="actions">
         <form hx-post="/ui/jobs/{{ job.id }}/apply" hx-target="#apply-result" hx-swap="outerHTML">
-            <button type="submit">Dry-run</button>
+            <button type="submit" class="secondary">Dry-run<span class="spinner htmx-indicator"></span></button>
         </form>
         <form hx-post="/ui/jobs/{{ job.id }}/apply" hx-target="#apply-result" hx-swap="outerHTML"
               hx-confirm="Move {{ matches|length }} file(s) into the library?">
             <input type="hidden" name="confirm" value="on">
-            <button type="submit">Apply</button>
+            <button type="submit">Apply<span class="spinner htmx-indicator"></span></button>
         </form>
     </div>
 </div>

@@ -1,10 +1,10 @@
 <div id="apply-result" class="applied">
     {% if applied %}
-        <h2>Applied</h2>
-        <p>Moved {{ total - errors|length }} of {{ total }} file(s) into the library.</p>
+        <h2><span class="outcome-icon">✓</span>Applied</h2>
+        <p>Moved {{ total - errors|length }} of {{ total }} file(s) into the library. Trigger a library scan in Jellyfin to pick them up.</p>
     {% else %}
-        <h2>Dry-run</h2>
-        <p>Nothing was moved. The proposed table above is what would happen with Apply.</p>
+        <h2><span class="outcome-icon">○</span>Dry-run</h2>
+        <p>Nothing was moved. The table above is exactly what Apply would do.</p>
     {% endif %}
     {% if errors %}
     <div class="errors">

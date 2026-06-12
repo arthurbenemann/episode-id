@@ -5,51 +5,71 @@
     <fieldset>
         <legend>Scan a folder</legend>
 
+        <p class="section-label">Source</p>
+
         <label>
             Folder
             <input type="text" name="folder" value="{{ defaults.media_root }}" required>
+            <span class="hint">Folder of .mkv files, e.g. a MakeMKV disc rip.</span>
         </label>
 
-        <label>
-            Provider
-            <select name="provider">
-                <option value="chakoteya" selected>chakoteya (Star Trek, no key needed)</option>
-                <option value="opensubtitles">opensubtitles (any show — needs API key + TVDB id)</option>
-            </select>
-        </label>
+        <p class="section-label">Show</p>
 
-        <label>
-            Show (chakoteya only)
-            <select name="series_key" required>
-                {% for key in series_keys %}
-                <option value="{{ key }}"{% if key == 'tng' %} selected{% endif %}>{{ key }}</option>
-                {% endfor %}
-            </select>
-        </label>
-
-        <label>
-            Season
-            <input type="number" name="season" min="0" value="1" required>
-        </label>
+        <div class="form-row halves">
+            <div class="field">
+                <label>
+                    Provider
+                    <select name="provider" id="provider">
+                        <option value="chakoteya" selected>chakoteya — Star Trek, no key needed</option>
+                        <option value="opensubtitles">opensubtitles — any show, needs API key + TVDB id</option>
+                    </select>
+                </label>
+            </div>
+            <div class="field">
+                <label>
+                    Show <span class="muted">(chakoteya only)</span>
+                    <select name="series_key" id="series_key" required>
+                        {% for key in series_keys %}
+                        <option value="{{ key }}"{% if key == 'tng' %} selected{% endif %}>{{ key }}</option>
+                        {% endfor %}
+                    </select>
+                </label>
+            </div>
+        </div>
 
         <label>
             Series title
-            <input type="text" name="series_title" required>
+            <input type="text" name="series_title" id="series_title" required>
+            <span class="hint">Used in output filenames — reserved characters are stripped automatically.</span>
         </label>
 
-        <label>
-            Year (optional)
-            <input type="number" name="year" min="1900" max="2100">
-        </label>
+        <div class="form-row">
+            <div class="field">
+                <label>
+                    Season
+                    <input type="number" name="season" min="0" value="1" required>
+                </label>
+            </div>
+            <div class="field">
+                <label>
+                    Year <span class="muted">(optional)</span>
+                    <input type="number" name="year" id="year" min="1900" max="2100">
+                </label>
+            </div>
+            <div class="field">
+                <label>
+                    TVDB id <span class="muted">(optional)</span>
+                    <input type="number" name="tvdb_id" id="tvdb_id" min="1">
+                </label>
+            </div>
+        </div>
 
-        <label>
-            TVDB id (optional)
-            <input type="number" name="tvdb_id" min="1">
-        </label>
+        <p class="section-label">Output</p>
 
         <label>
             Library root
             <input type="text" name="library_root" value="{{ defaults.library_root }}">
+            <span class="hint">Your Jellyfin TV library — files are moved into <code>Series (Year)/Season XX/</code> under here.</span>
         </label>
 
         <label class="checkbox">
@@ -57,9 +77,34 @@
             Include [tvdbid-NNN] in the series folder name
         </label>
 
-        <button type="submit">Scan</button>
+        <button type="submit" class="scan-btn">Scan<span class="spinner htmx-indicator"></span></button>
     </fieldset>
 </form>
 
 <div id="job"></div>
+
+<script>
+// Prefill title/year/TVDB id when a Trek series is picked from the dropdown.
+(function () {
+    var TREK = {
+        tos: ["Star Trek The Original Series", 1966, 77526],
+        tas: ["Star Trek The Animated Series", 1973, 72705],
+        tng: ["Star Trek The Next Generation", 1987, 71470],
+        ds9: ["Star Trek Deep Space Nine", 1993, 72073],
+        voy: ["Star Trek Voyager", 1995, 74550],
+        ent: ["Star Trek Enterprise", 2001, 73893],
+        dis: ["Star Trek Discovery", 2017, 328711]
+    };
+    var sel = document.getElementById("series_key");
+    function fill() {
+        var data = TREK[sel.value];
+        if (!data) return;
+        document.getElementById("series_title").value = data[0];
+        document.getElementById("year").value = data[1];
+        document.getElementById("tvdb_id").value = data[2];
+    }
+    sel.addEventListener("change", fill);
+    if (!document.getElementById("series_title").value) fill();
+})();
+</script>
 {% endblock %}
