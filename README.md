@@ -88,6 +88,10 @@ the proposed Jellyfin layout in a table with confidence badges
 dialog. Stack is plain HTML + htmx + a vanilla CSS file; no Node
 toolchain.
 
+| Scan form | Proposed renames | Applied |
+| --- | --- | --- |
+| ![Scan form](docs/screenshots/index.jpg) | ![Proposed renames](docs/screenshots/results.jpg) | ![Applied](docs/screenshots/applied.jpg) |
+
 ## JSON API (M2)
 
 The same pipeline is exposed over HTTP. Drive it with curl:
