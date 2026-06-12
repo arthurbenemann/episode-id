@@ -2,122 +2,96 @@
 
 [![CI](https://github.com/arthurbenemann/episode-id/actions/workflows/ci.yml/badge.svg)](https://github.com/arthurbenemann/episode-id/actions/workflows/ci.yml)
 
-Identify TV episode MKV files by fuzzy-matching their embedded subtitles against
-canonical episode transcripts, then rename them into a [Jellyfin-compatible
-layout](https://jellyfin.org/docs/general/server/media/shows/).
+Identify TV episode MKVs by fuzzy-matching their embedded subtitles against
+canonical transcripts, then rename them into a
+[Jellyfin-compatible layout](https://jellyfin.org/docs/general/server/media/shows/).
 
 Built for the case where MakeMKV (or any disc ripper) emits files like
-`title_t00.mkv`, `title_t04.mkv`, ... in random order and you don't want to
+`title_t00.mkv`, `title_t04.mkv`, … in random order and you don't want to
 play each one to figure out which episode it is.
 
-## How it works
+## Features
 
-1. **Extract subtitles** from each MKV with `ffmpeg`.
-2. **Fetch canonical transcripts** for the selected show + season from a
-   provider (currently `chakoteya.net` for Star Trek; OpenSubtitles support
-   coming in a later milestone).
-3. **Fuzzy-match** each file's dialogue sample against every candidate
-   episode using `rapidfuzz.token_set_ratio`.
-4. **Globally assign** files to episodes via the Hungarian algorithm so two
-   files can't both be matched to the same episode.
-5. **Propose renames** into Jellyfin layout. Dry-run by default; `--apply`
-   moves the files.
+- **Subtitle fingerprinting** — extracts the best English text track with
+  ffmpeg, fuzzy-matches dialogue against reference transcripts
+  (`rapidfuzz` + Hungarian assignment, so two files can't claim the same
+  episode).
+- **Jellyfin-ready renames** — `Series (Year) [tvdbid-NNN]/Season XX/…`,
+  reserved characters stripped, dry-run by default, never overwrites.
+- **Web UI** — scan a folder, watch progress, review confidence-scored
+  proposals, apply behind a confirm dialog. Plain HTML + htmx, no build
+  step.
+- **Two transcript providers** — chakoteya.net for Star Trek (no key
+  needed) and OpenSubtitles for everything else (free API key).
+- **SQLite transcript cache** — OpenSubtitles downloads are quota-limited,
+  so fetched transcripts are cached and re-scans never re-download.
+- **One Docker image** — web UI by default, CLI included.
 
-## Quickstart (CLI, M1)
-
-Requirements: Python 3.12+, `ffmpeg` + `ffprobe` on `PATH`.
-
-```bash
-pip install -e .
-
-episode-id \
-    --folder ~/rips/TNG-S03 \
-    --show tng \
-    --season 3 \
-    --series-title "Star Trek The Next Generation" \
-    --year 1987 \
-    --tvdb-id 71470 \
-    --library-root /media/tv
-```
-
-By default this is a dry-run. Inspect the proposed table, then add `--apply` to
-actually move the files.
-
-Supported `--show` values for the Chakoteya provider:
-`tos`, `tas`, `tng`, `ds9`, `voy`, `ent`, `dis`.
-
-### Beyond Star Trek: OpenSubtitles (M4)
-
-Any show OpenSubtitles knows about, keyed by TVDB id. Set
-`OPENSUBTITLES_API_KEY` in `.env` (free key from
-[opensubtitles.com/consumers](https://www.opensubtitles.com/consumers)),
-then:
-
-```bash
-episode-id \
-    --folder ~/rips/MASH-S04 \
-    --provider opensubtitles \
-    --season 4 \
-    --series-title "M*A*S*H" \
-    --year 1972 \
-    --tvdb-id 70994
-```
-
-Downloads count against a small daily quota, so fetched transcripts are
-cached in SQLite (`DATABASE_URL`, default `./data/episode-id.db`) and
-re-scans hit the cache instead of the API.
-
-## Output layout
-
-```
-/media/tv/
-└── Star Trek The Next Generation (1987) [tvdbid-71470]/
-    └── Season 03/
-        ├── Star Trek The Next Generation - S03E01 - Evolution.mkv
-        ├── Star Trek The Next Generation - S03E02 - The Ensigns of Command.mkv
-        └── ...
-```
-
-## Web UI (M3)
-
-Run `make dev` and open <http://localhost:8080>. The page is a single
-form: folder, show, season, series metadata. Submit, watch the
-progress fragment poll through extraction → fetch → match, then review
-the proposed Jellyfin layout in a table with confidence badges
-(green ≥80, yellow ≥60, red <60). Apply is gated behind a confirm
-dialog. Stack is plain HTML + htmx + a vanilla CSS file; no Node
-toolchain.
+## Screenshots
 
 | Scan form | Proposed renames | Applied |
 | --- | --- | --- |
 | ![Scan form](docs/screenshots/index.jpg) | ![Proposed renames](docs/screenshots/results.jpg) | ![Applied](docs/screenshots/applied.jpg) |
 
-## JSON API (M2)
+## How it works
 
-The same pipeline is exposed over HTTP. Drive it with curl:
+1. Extract the best English subtitle track from each MKV (`ffmpeg`).
+2. Fetch canonical transcripts for the selected show + season from a
+   provider, caching them in SQLite.
+3. Fuzzy-match a dialogue sample from each file (default: 40 lines starting
+   3 minutes in, past cold opens and recaps) against every candidate
+   episode.
+4. Solve the globally optimal file → episode assignment with the Hungarian
+   algorithm.
+5. Propose renames with per-file confidence; you review and apply.
+
+## Run it
+
+Requires Docker (or Podman) with compose support.
 
 ```bash
-# Kick off a scan — returns {"job_id": "..."}
-curl -s http://localhost:8080/scan -H 'content-type: application/json' -d '{
-  "folder": "/abs/path/to/rips/TNG-S03",
-  "series_key": "tng",
-  "season": 3,
-  "series_title": "Star Trek The Next Generation",
-  "year": 1987,
-  "tvdb_id": 71470,
-  "library_root": "/media/tv"
-}'
-
-# Poll status
-curl -s http://localhost:8080/jobs/$JOB_ID
-
-# Inspect the proposed Jellyfin mapping
-curl -s http://localhost:8080/jobs/$JOB_ID/results
-
-# Dry-run (default) or apply
-curl -s http://localhost:8080/jobs/$JOB_ID/apply \
-    -H 'content-type: application/json' -d '{"confirm": true}'
+git clone https://github.com/arthurbenemann/episode-id.git
+cd episode-id
+docker compose up -d --build
 ```
+
+Open <http://localhost:8080>. Drop your rips in `./media/input` and point
+`./media/tv` at your Jellyfin TV library (override either with
+`MEDIA_INPUT` / `LIBRARY_ROOT`). The transcript cache persists in
+`./data/`.
+
+Pre-built images are published to `ghcr.io/arthurbenemann/episode-id` on
+each release.
+
+To override settings, copy `.env.example` to `.env` and recreate the
+container — every variable is documented inline. The one you'll likely
+want: `OPENSUBTITLES_API_KEY` (free from
+[opensubtitles.com/consumers](https://www.opensubtitles.com/consumers))
+unlocks the OpenSubtitles provider for shows beyond Star Trek.
+
+### CLI
+
+The same pipeline ships as a CLI in the image:
+
+```bash
+docker run --rm --entrypoint episode-id \
+    -v ~/rips/TNG-S03:/media/input \
+    -v /path/to/tv:/media/tv \
+    ghcr.io/arthurbenemann/episode-id \
+    --folder /media/input --show tng --season 3 \
+    --series-title "Star Trek The Next Generation" --year 1987 --tvdb-id 71470
+```
+
+Dry-run by default; add `--apply` to move files. Use
+`--provider opensubtitles --tvdb-id <id>` for non-Trek shows
+(`-e OPENSUBTITLES_API_KEY=…`).
+
+### JSON API
+
+Everything the UI does is also plain HTTP — `POST /scan`,
+`GET /jobs/{id}`, `GET /jobs/{id}/results`, `POST /jobs/{id}/apply`
+(`{"confirm": true}` to actually move). Interactive docs at
+<http://localhost:8080/docs>.
 
 ## Roadmap
 
@@ -130,14 +104,10 @@ curl -s http://localhost:8080/jobs/$JOB_ID/apply \
 
 See [docs/SPEC.md](docs/SPEC.md) for the full design.
 
-## Development
+## Contributing
 
-```bash
-make install         # editable install + dev deps
-make test            # pytest
-make lint            # ruff check + format check
-make fmt             # ruff format
-```
+See [CONTRIBUTING.md](CONTRIBUTING.md) for local setup, the test suite,
+and the release flow.
 
 ## License
 

@@ -1,8 +1,24 @@
+{% set stages = ["queued", "extracting", "fetching", "matching"] %}
+{% set current = stages.index(job.progress.stage) if job.progress.stage in stages else 0 %}
 <div class="progress"
      hx-get="/ui/jobs/{{ job.id }}/progress"
      hx-trigger="every 1s"
      hx-swap="outerHTML">
-    <h2>Scanning</h2>
-    <p>Job <code>{{ job.id[:12] }}</code> — stage: <strong>{{ job.progress.stage }}</strong></p>
-    <p>Files: {{ job.progress.files_done }} / {{ job.progress.files_total }}</p>
+    <h2>Scanning <span class="spinner"></span></h2>
+    <p class="stages">
+        {% for stage in stages %}
+        <span class="stage{% if loop.index0 == current %} active{% elif loop.index0 < current %} done{% endif %}">{{ stage }}</span>
+        {% endfor %}
+    </p>
+    {% if job.progress.stage == "extracting" and job.progress.files_total %}
+    <div class="bar-track">
+        <div class="bar-fill" style="width: {{ (job.progress.files_done * 100 // job.progress.files_total) }}%"></div>
+    </div>
+    <p class="file-count">{{ job.progress.files_done }} / {{ job.progress.files_total }} files · job <code>{{ job.id[:12] }}</code></p>
+    {% else %}
+    <div class="bar-track">
+        <div class="bar-fill indeterminate"></div>
+    </div>
+    <p class="file-count">job <code>{{ job.id[:12] }}</code></p>
+    {% endif %}
 </div>

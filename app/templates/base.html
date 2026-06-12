@@ -4,16 +4,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}EpisodeID{% endblock %}</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='2' y='2' width='28' height='28' rx='7' fill='%237c6cf2'/%3E%3Crect x='8' y='9' width='16' height='3' rx='1.5' fill='white'/%3E%3Crect x='8' y='15' width='16' height='3' rx='1.5' fill='white' opacity='.75'/%3E%3Crect x='8' y='21' width='10' height='3' rx='1.5' fill='white' opacity='.5'/%3E%3C/svg%3E">
     <link rel="stylesheet" href="{{ url_for('static', path='/style.css') }}">
     <script src="https://unpkg.com/htmx.org@2.0.4" crossorigin="anonymous"></script>
 </head>
 <body>
     <header>
-        <h1>EpisodeID</h1>
-        <p class="tagline">Identify TV episode MKVs by subtitle fuzzy-matching.</p>
+        <h1 class="wordmark"><span class="mark"></span>Episode<span class="accent">ID</span></h1>
+        <p class="tagline">Identify TV episode MKVs by fuzzy-matching their subtitles.</p>
+        <p class="pipeline">
+            <span class="step">extract subs</span><span class="sep">→</span><span class="step">fetch transcripts</span><span class="sep">→</span><span class="step">match</span><span class="sep">→</span><span class="step">rename for Jellyfin</span>
+        </p>
     </header>
     <main>
         {% block content %}{% endblock %}
     </main>
+    <footer>
+        <a href="https://github.com/arthurbenemann/episode-id">episode-id</a> · dry-run by default · never overwrites
+    </footer>
 </body>
 </html>
