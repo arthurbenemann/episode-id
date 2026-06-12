@@ -18,7 +18,8 @@ from pathlib import Path
 
 from app.config import settings
 from app.core import extractor, matcher, renamer
-from app.providers.chakoteya import ChakoteyaProvider
+from app.db import TranscriptCache
+from app.providers.registry import create_provider
 
 log = logging.getLogger(__name__)
 
@@ -75,6 +76,7 @@ class ScanRequest:
     tvdb_id: int | None = None
     library_root: Path | None = None
     include_provider_id: bool = True
+    provider: str = "chakoteya"
 
 
 @dataclass
@@ -183,8 +185,15 @@ def _execute(job: Job, store: JobStore) -> None:
     with store._lock:
         job.progress.stage = STAGE_FETCHING
 
-    provider = ChakoteyaProvider()
-    transcripts = provider.fetch_season(req.series_key, req.season)
+    provider = create_provider(req.provider, cache=TranscriptCache(settings.cache_db_path))
+    if req.provider == "opensubtitles":
+        # OpenSubtitles keys series by TVDB id (see providers/base.py).
+        if req.tvdb_id is None:
+            raise ValueError("the opensubtitles provider requires a TVDB id")
+        series_key = str(req.tvdb_id)
+    else:
+        series_key = req.series_key
+    transcripts = provider.fetch_season(series_key, req.season)
     episodes = [
         matcher.EpisodeReference(
             season=t.season,

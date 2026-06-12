@@ -44,6 +44,27 @@ actually move the files.
 Supported `--show` values for the Chakoteya provider:
 `tos`, `tas`, `tng`, `ds9`, `voy`, `ent`, `dis`.
 
+### Beyond Star Trek: OpenSubtitles (M4)
+
+Any show OpenSubtitles knows about, keyed by TVDB id. Set
+`OPENSUBTITLES_API_KEY` in `.env` (free key from
+[opensubtitles.com/consumers](https://www.opensubtitles.com/consumers)),
+then:
+
+```bash
+episode-id \
+    --folder ~/rips/MASH-S04 \
+    --provider opensubtitles \
+    --season 4 \
+    --series-title "M*A*S*H" \
+    --year 1972 \
+    --tvdb-id 70994
+```
+
+Downloads count against a small daily quota, so fetched transcripts are
+cached in SQLite (`DATABASE_URL`, default `./data/episode-id.db`) and
+re-scans hit the cache instead of the API.
+
 ## Output layout
 
 ```
@@ -97,7 +118,7 @@ curl -s http://localhost:8080/jobs/$JOB_ID/apply \
 - [x] **M1** — CLI prototype with Chakoteya provider and Jellyfin renamer
 - [x] **M2** — FastAPI wrapper around the same logic
 - [x] **M3** — htmx web UI
-- [ ] **M4** — OpenSubtitles provider (works beyond Trek)
+- [x] **M4** — OpenSubtitles provider (works beyond Trek)
 - [ ] **M5** — PGS / VobSub OCR for Blu-ray rips without text subs
 - [ ] **M6** — CI/CD release pipeline publishing to ghcr.io
 

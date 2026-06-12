@@ -38,9 +38,15 @@ class Settings(BaseSettings):
 
     # Providers
     opensubtitles_api_key: str | None = None
-    opensubtitles_username: str | None = None
-    opensubtitles_password: str | None = None
     tvdb_api_key: str | None = None
+
+    # Transcript cache (spec: cache aggressively, OpenSubtitles rate-limits)
+    database_url: str = "sqlite:///./data/episode-id.db"
+
+    @property
+    def cache_db_path(self) -> Path:
+        """Filesystem path extracted from the sqlite:/// database URL."""
+        return Path(self.database_url.removeprefix("sqlite:///"))
 
     # HTTP
     http_timeout_seconds: int = 30

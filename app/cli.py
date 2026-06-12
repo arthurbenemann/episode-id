@@ -22,7 +22,9 @@ from rich.table import Table
 
 from app.config import settings
 from app.core import extractor, matcher, renamer
-from app.providers.chakoteya import ChakoteyaProvider
+from app.db import TranscriptCache
+from app.providers.base import SubtitleProvider
+from app.providers.registry import PROVIDER_NAMES, create_provider
 
 app = typer.Typer(
     add_completion=False,
@@ -72,11 +74,12 @@ def _extract_samples(files: list[Path]) -> list[matcher.FileSample]:
 
 
 def _fetch_episodes(
+    provider: SubtitleProvider,
     series_key: str,
     season: int,
 ) -> list[matcher.EpisodeReference]:
-    with console.status(f"[bold]Fetching transcripts for {series_key} S{season:02d}[/]"):
-        provider = ChakoteyaProvider()
+    status = f"[bold]Fetching transcripts for {series_key} S{season:02d} via {provider.name}[/]"
+    with console.status(status):
         transcripts = provider.fetch_season(series_key, season)
     return [
         matcher.EpisodeReference(
@@ -158,11 +161,17 @@ def rename(
         dir_okay=True,
         help="Folder containing MKV files to identify.",
     ),
-    show: str = typer.Option(
-        ...,
+    show: str | None = typer.Option(
+        None,
         "--show",
         "-s",
-        help="Series key for the provider (e.g. 'tng' for Star Trek: TNG).",
+        help="Series key for the chakoteya provider (e.g. 'tng' for Star Trek: TNG).",
+    ),
+    provider: str = typer.Option(
+        "chakoteya",
+        "--provider",
+        "-p",
+        help="Transcript provider: 'chakoteya' (Star Trek) or 'opensubtitles' (any show).",
     ),
     season: int = typer.Option(..., "--season", "-S", help="Season number."),
     series_title: str = typer.Option(
@@ -201,8 +210,25 @@ def rename(
     _setup_logging(verbose)
     lib_root = library_root or settings.library_root
 
+    provider_name = provider.lower()
+    if provider_name not in PROVIDER_NAMES:
+        console.print(
+            f"[red]Unknown provider '{provider}'. Known: {', '.join(PROVIDER_NAMES)}[/red]"
+        )
+        raise typer.Exit(code=1)
+    if provider_name == "opensubtitles":
+        if tvdb_id is None:
+            console.print("[red]--provider opensubtitles requires --tvdb-id[/red]")
+            raise typer.Exit(code=1)
+        series_key = str(tvdb_id)
+    else:
+        if show is None:
+            console.print("[red]--show is required for the chakoteya provider[/red]")
+            raise typer.Exit(code=1)
+        series_key = show
+
     console.print(f"[bold]Folder:[/]        {folder}")
-    console.print(f"[bold]Show / season:[/] {show} S{season:02d}")
+    console.print(f"[bold]Show / season:[/] {series_key} S{season:02d} ({provider_name})")
     console.print(f"[bold]Library root:[/]  {lib_root}")
     console.print(f"[bold]Mode:[/]          {'APPLY' if apply_changes else 'dry-run'}\n")
 
@@ -212,8 +238,12 @@ def rename(
         console.print("[red]No usable subtitle samples extracted. Aborting.[/red]")
         raise typer.Exit(code=1)
 
-    episodes = _fetch_episodes(show, season)
-    console.print(f"Loaded [bold]{len(episodes)}[/] episodes from chakoteya.\n")
+    provider_obj = create_provider(
+        provider_name,
+        cache=TranscriptCache(settings.cache_db_path),
+    )
+    episodes = _fetch_episodes(provider_obj, series_key, season)
+    console.print(f"Loaded [bold]{len(episodes)}[/] episodes from {provider_name}.\n")
 
     matches = matcher.match(samples, episodes)
 

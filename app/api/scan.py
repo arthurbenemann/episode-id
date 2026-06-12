@@ -15,6 +15,7 @@ from app.api.schemas import (
     ScanRequestModel,
     ScanResponse,
 )
+from app.providers.registry import PROVIDER_NAMES
 from app.services import jobs as jobs_service
 
 router = APIRouter()
@@ -24,6 +25,16 @@ router = APIRouter()
 def scan(body: ScanRequestModel, background_tasks: BackgroundTasks) -> ScanResponse:
     if not body.folder.exists() or not body.folder.is_dir():
         raise HTTPException(status_code=400, detail=f"folder not found: {body.folder}")
+    if body.provider not in PROVIDER_NAMES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"unknown provider: {body.provider}. Known: {', '.join(PROVIDER_NAMES)}",
+        )
+    if body.provider == "opensubtitles" and body.tvdb_id is None:
+        raise HTTPException(
+            status_code=400,
+            detail="the opensubtitles provider requires tvdb_id",
+        )
 
     req = jobs_service.ScanRequest(
         folder=body.folder,
@@ -34,6 +45,7 @@ def scan(body: ScanRequestModel, background_tasks: BackgroundTasks) -> ScanRespo
         tvdb_id=body.tvdb_id,
         library_root=body.library_root,
         include_provider_id=body.include_provider_id,
+        provider=body.provider,
     )
     job = jobs_service.get_store().create(req)
     background_tasks.add_task(jobs_service.run_scan, job.id)

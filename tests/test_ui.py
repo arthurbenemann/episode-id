@@ -133,6 +133,27 @@ def test_ui_scan_rejects_unknown_series_key(
     assert soup.find("div", class_="error") is not None
 
 
+def test_index_has_provider_select(client: TestClient) -> None:
+    soup = BeautifulSoup(client.get("/").text, "lxml")
+    options = {o["value"] for o in soup.select("select[name=provider] option")}
+    assert options == {"chakoteya", "opensubtitles"}
+
+
+def test_ui_scan_opensubtitles_requires_tvdb_id(
+    client: TestClient,
+    mkv_folder: Path,
+    tmp_path: Path,
+) -> None:
+    form = _scan_form(mkv_folder, tmp_path / "out")
+    form["provider"] = "opensubtitles"
+    form["tvdb_id"] = ""
+    resp = client.post("/ui/scan", data=form)
+    assert resp.status_code == 200
+    soup = BeautifulSoup(resp.text, "lxml")
+    assert soup.find("div", class_="error") is not None
+    assert "TVDB id" in resp.text
+
+
 def test_progress_still_polls_for_pending_job(client: TestClient) -> None:
     """A job that hasn't started yet should keep polling."""
     job = jobs_service.get_store().create(
