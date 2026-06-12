@@ -11,7 +11,15 @@
         </label>
 
         <label>
-            Show
+            Provider
+            <select name="provider">
+                <option value="chakoteya" selected>chakoteya (Star Trek, no key needed)</option>
+                <option value="opensubtitles">opensubtitles (any show — needs API key + TVDB id)</option>
+            </select>
+        </label>
+
+        <label>
+            Show (chakoteya only)
             <select name="series_key" required>
                 {% for key in series_keys %}
                 <option value="{{ key }}"{% if key == 'tng' %} selected{% endif %}>{{ key }}</option>

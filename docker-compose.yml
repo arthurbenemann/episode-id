@@ -10,6 +10,8 @@ services:
       - ${MEDIA_INPUT:-./media/input}:/media/input
       # Your Jellyfin TV library root — read-write so we can place files in.
       - ${LIBRARY_ROOT:-./media/tv}:/media/tv
+      # Transcript cache survives container restarts (OpenSubtitles quota).
+      - ${DATA_DIR:-./data}:/app/data
     environment:
       MEDIA_ROOT: /media/input
       LIBRARY_ROOT: /media/tv

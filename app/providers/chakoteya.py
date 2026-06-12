@@ -25,6 +25,7 @@ from typing import Final
 import httpx
 from bs4 import BeautifulSoup, Tag
 
+from app.db import TranscriptCache
 from app.providers.base import EpisodeTranscript, SubtitleProvider
 
 log = logging.getLogger(__name__)
@@ -76,7 +77,9 @@ class ChakoteyaProvider(SubtitleProvider):
         *,
         client: httpx.Client | None = None,
         timeout: int = 30,
+        cache: TranscriptCache | None = None,
     ) -> None:
+        self._cache = cache
         self._client = client or httpx.Client(
             timeout=timeout,
             headers={
@@ -108,15 +111,21 @@ class ChakoteyaProvider(SubtitleProvider):
 
         transcripts: list[EpisodeTranscript] = []
         for entry in season_entries:
+            if self._cache is not None:
+                cached = self._cache.get(self.name, series_key, entry.season, entry.episode)
+                if cached is not None:
+                    transcripts.append(cached)
+                    continue
             text = self._fetch_transcript(entry.transcript_url)
-            transcripts.append(
-                EpisodeTranscript(
-                    season=entry.season,
-                    episode=entry.episode,
-                    title=entry.title,
-                    text=text,
-                )
+            transcript = EpisodeTranscript(
+                season=entry.season,
+                episode=entry.episode,
+                title=entry.title,
+                text=text,
             )
+            if self._cache is not None:
+                self._cache.put(self.name, series_key, transcript)
+            transcripts.append(transcript)
         return transcripts
 
     # ---- internals ----

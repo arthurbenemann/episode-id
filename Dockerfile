@@ -11,9 +11,10 @@ RUN apt-get update \
 WORKDIR /app
 
 # hatchling's `packages = ["app"]` resolves at install time, so the source
-# tree has to exist before `pip install .`. We trade weaker layer caching
-# for a build that actually works.
-COPY pyproject.toml README.md ./
+# tree has to exist before `pip install .`. LICENSE is also required because
+# pyproject.toml declares `license = { file = "LICENSE" }`. We trade weaker
+# layer caching for a build that actually works.
+COPY pyproject.toml README.md LICENSE ./
 COPY app/ ./app/
 RUN pip install --no-cache-dir hatchling \
     && pip install --no-cache-dir .

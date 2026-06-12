@@ -10,14 +10,22 @@ permissions:
   packages: write
 
 jobs:
+  # Re-run the full lint + test + docker-build gate on the tagged commit.
+  # If somebody tags a broken sha, no release is cut.
+  ci:
+    uses: ./.github/workflows/ci.yml
+
   release:
+    name: Build, publish, release
+    needs: ci
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
+          # git-cliff needs the full history to walk tag-to-tag.
           fetch-depth: 0
 
-      - name: Generate changelog
+      - name: Generate release notes
         uses: orhun/git-cliff-action@v3
         with:
           config: cliff.toml
@@ -35,7 +43,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract metadata
+      - name: Extract image metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
@@ -46,7 +54,7 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}
             type=raw,value=latest
 
-      - name: Build and push image
+      - name: Build and push multi-arch image
         uses: docker/build-push-action@v6
         with:
           context: .

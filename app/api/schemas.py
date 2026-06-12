@@ -24,6 +24,10 @@ class ScanRequestModel(BaseModel):
         description="Output root. Defaults to LIBRARY_ROOT env / settings.library_root.",
     )
     include_provider_id: bool = True
+    provider: str = Field(
+        default="chakoteya",
+        description="Transcript provider: 'chakoteya' (Star Trek) or 'opensubtitles'.",
+    )
 
 
 class ScanResponse(BaseModel):

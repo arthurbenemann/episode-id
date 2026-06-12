@@ -19,6 +19,7 @@ from fastapi.templating import Jinja2Templates
 
 from app.config import settings
 from app.providers.chakoteya import SERIES_PATHS
+from app.providers.registry import PROVIDER_NAMES
 from app.services import jobs as jobs_service
 
 TEMPLATES_DIR = Path(__file__).resolve().parent.parent / "templates"
@@ -58,6 +59,7 @@ def index(request: Request) -> HTMLResponse:
         "index.html",
         {
             "series_keys": sorted(SERIES_PATHS),
+            "providers": PROVIDER_NAMES,
             "defaults": _form_defaults(),
         },
     )
@@ -75,6 +77,7 @@ def ui_scan(
     tvdb_id: str = Form(""),
     library_root: str = Form(""),
     include_provider_id: bool = Form(False),
+    provider: str = Form("chakoteya"),
 ) -> HTMLResponse:
     try:
         year_int = _parse_optional_int(year)
@@ -86,8 +89,14 @@ def ui_scan(
     if not folder_path.exists() or not folder_path.is_dir():
         return _error(request, f"folder not found: {folder}")
 
-    if series_key not in SERIES_PATHS:
+    if provider not in PROVIDER_NAMES:
+        return _error(request, f"unknown provider: {provider}")
+
+    if provider == "chakoteya" and series_key not in SERIES_PATHS:
         return _error(request, f"unknown series key: {series_key}")
+
+    if provider == "opensubtitles" and tvdb_id_int is None:
+        return _error(request, "the opensubtitles provider requires a TVDB id")
 
     req = jobs_service.ScanRequest(
         folder=folder_path,
@@ -98,6 +107,7 @@ def ui_scan(
         tvdb_id=tvdb_id_int,
         library_root=Path(library_root) if library_root.strip() else None,
         include_provider_id=include_provider_id,
+        provider=provider,
     )
     job = jobs_service.get_store().create(req)
     background_tasks.add_task(jobs_service.run_scan, job.id)

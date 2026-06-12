@@ -92,7 +92,7 @@ def patched_pipeline():
     with (
         patch("app.services.jobs.extractor.extract_subtitles", side_effect=_fake_extract),
         patch(
-            "app.services.jobs.ChakoteyaProvider.fetch_season",
+            "app.providers.chakoteya.ChakoteyaProvider.fetch_season",
             new=_fake_fetch_season,
         ),
     ):

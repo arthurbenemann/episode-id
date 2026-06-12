@@ -80,6 +80,42 @@ def test_results_match_jellyfin_layout(
     assert "S01E02" in t2["destination"]
 
 
+def test_scan_rejects_unknown_provider(
+    client: TestClient,
+    mkv_folder: Path,
+) -> None:
+    resp = client.post(
+        "/scan",
+        json={
+            "folder": str(mkv_folder),
+            "series_key": "tng",
+            "season": 1,
+            "series_title": "X",
+            "provider": "nonsense",
+        },
+    )
+    assert resp.status_code == 400
+    assert "unknown provider" in resp.json()["detail"]
+
+
+def test_scan_opensubtitles_requires_tvdb_id(
+    client: TestClient,
+    mkv_folder: Path,
+) -> None:
+    resp = client.post(
+        "/scan",
+        json={
+            "folder": str(mkv_folder),
+            "series_key": "tng",
+            "season": 1,
+            "series_title": "X",
+            "provider": "opensubtitles",
+        },
+    )
+    assert resp.status_code == 400
+    assert "tvdb_id" in resp.json()["detail"]
+
+
 def test_scan_validates_folder(client: TestClient, tmp_path: Path) -> None:
     resp = client.post(
         "/scan",
