@@ -5,25 +5,49 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  # Re-invoked by release.yml so the same gate guards both PRs and tags.
+  workflow_call:
 
 jobs:
-  lint:
+  lint-and-test:
+    name: Lint + test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Install ruff
-        run: pip install ruff
-      - name: Ruff check
-        run: ruff check .
-      - name: Ruff format check
-        run: ruff format --check .
+          cache: pip
+          cache-dependency-path: pyproject.toml
 
-  test:
+      - name: Install (editable, with dev extras)
+        run: pip install -e ".[dev]"
+
+      - name: Lint
+        run: make lint
+
+      - name: Test
+        run: make test
+
+  docker-build:
+    name: Docker image builds
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Run tests via docker-compose
-        run: docker compose -f docker-compose.test.yml up --build --abort-on-container-exit --exit-code-from tests
+
+      - uses: docker/setup-buildx-action@v3
+
+      # Single-platform amd64 build is enough to catch Dockerfile breakage;
+      # the multi-arch matrix runs in release.yml. `load: true` puts the
+      # image into the local daemon for the smoke check that follows.
+      - name: Build image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          load: true
+          tags: episode-id:ci
+
+      - name: Smoke-check the CLI entrypoint
+        run: docker run --rm --entrypoint episode-id episode-id:ci --help

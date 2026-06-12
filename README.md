@@ -1,5 +1,7 @@
 # EpisodeID
 
+[![CI](https://github.com/arthurbenemann/episode-id/actions/workflows/ci.yml/badge.svg)](https://github.com/arthurbenemann/episode-id/actions/workflows/ci.yml)
+
 Identify TV episode MKV files by fuzzy-matching their embedded subtitles against
 canonical episode transcripts, then rename them into a [Jellyfin-compatible
 layout](https://jellyfin.org/docs/general/server/media/shows/).
@@ -120,7 +122,7 @@ curl -s http://localhost:8080/jobs/$JOB_ID/apply \
 - [x] **M3** — htmx web UI
 - [x] **M4** — OpenSubtitles provider (works beyond Trek)
 - [ ] **M5** — PGS / VobSub OCR for Blu-ray rips without text subs
-- [ ] **M6** — CI/CD release pipeline publishing to ghcr.io
+- [x] **M6** — CI/CD release pipeline publishing to ghcr.io
 
 See [docs/SPEC.md](docs/SPEC.md) for the full design.
 
