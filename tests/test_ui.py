@@ -8,6 +8,7 @@ synchronously, so the first poll after a scan is already terminal.
 from __future__ import annotations
 
 from pathlib import Path
+from unittest.mock import patch
 
 from bs4 import BeautifulSoup
 from fastapi.testclient import TestClient
@@ -213,6 +214,8 @@ def test_ui_apply_with_confirm_on_moves_files(
     applied = client.post(f"/ui/jobs/{job_id}/apply", data={"confirm": "on"})
     assert applied.status_code == 200
     assert "Applied" in applied.text
+    # Jellyfin unconfigured -> the fallback "trigger a library scan" hint shows.
+    assert "Trigger a library scan in Jellyfin" in applied.text
 
     moved = sorted(p.name for p in library_root.rglob("*.mkv"))
     assert moved == [
@@ -220,6 +223,49 @@ def test_ui_apply_with_confirm_on_moves_files(
         "Star Trek The Next Generation - S01E02 - Battle Stations.mkv",
     ]
     assert list(mkv_folder.iterdir()) == []
+
+
+def test_ui_apply_shows_jellyfin_trigger_message(
+    client: TestClient,
+    mkv_folder: Path,
+    tmp_path: Path,
+    patched_pipeline: None,
+) -> None:
+    library_root = tmp_path / "out"
+    resp = client.post("/ui/scan", data=_scan_form(mkv_folder, library_root))
+    job_id = BeautifulSoup(resp.text, "lxml").find("div", class_="progress")["hx-get"].split("/")[3]
+    client.get(f"/ui/jobs/{job_id}/progress")
+
+    with patch(
+        "app.services.jobs.jellyfin.trigger_rescan",
+        return_value=jobs_service.jellyfin.JellyfinStatus.triggered(),
+    ):
+        applied = client.post(f"/ui/jobs/{job_id}/apply", data={"confirm": "on"})
+
+    assert applied.status_code == 200
+    assert "Jellyfin library scan triggered" in applied.text
+
+
+def test_ui_apply_shows_jellyfin_failure_message(
+    client: TestClient,
+    mkv_folder: Path,
+    tmp_path: Path,
+    patched_pipeline: None,
+) -> None:
+    library_root = tmp_path / "out"
+    resp = client.post("/ui/scan", data=_scan_form(mkv_folder, library_root))
+    job_id = BeautifulSoup(resp.text, "lxml").find("div", class_="progress")["hx-get"].split("/")[3]
+    client.get(f"/ui/jobs/{job_id}/progress")
+
+    with patch(
+        "app.services.jobs.jellyfin.trigger_rescan",
+        return_value=jobs_service.jellyfin.JellyfinStatus.failed("ConnectError: refused"),
+    ):
+        applied = client.post(f"/ui/jobs/{job_id}/apply", data={"confirm": "on"})
+
+    assert applied.status_code == 200
+    assert "Jellyfin rescan failed" in applied.text
+    assert "ConnectError: refused" in applied.text
 
 
 def test_ui_apply_unknown_job_returns_error_fragment(client: TestClient) -> None:

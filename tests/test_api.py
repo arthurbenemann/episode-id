@@ -159,6 +159,8 @@ def test_dry_run_apply_does_not_move(
     body = client.post(f"/jobs/{job_id}/apply", json={"confirm": False}).json()
     assert body["applied"] is False
     assert body["errors"] == []
+    # Dry-run never touches Jellyfin even when it is configured.
+    assert body["jellyfin"]["state"] == "skipped"
     assert sorted(p.name for p in mkv_folder.iterdir()) == ["t1.mkv", "t2.mkv"]
     assert not library_root.exists()
 
@@ -175,6 +177,8 @@ def test_apply_with_confirm_moves_files(
     body = client.post(f"/jobs/{job_id}/apply", json={"confirm": True}).json()
     assert body["applied"] is True
     assert body["errors"] == []
+    # Jellyfin not configured in tests -> rescan skipped.
+    assert body["jellyfin"]["state"] == "skipped"
 
     moved = sorted(p.name for p in library_root.rglob("*.mkv"))
     assert moved == [
@@ -182,6 +186,26 @@ def test_apply_with_confirm_moves_files(
         "Star Trek The Next Generation - S01E02 - Battle Stations.mkv",
     ]
     assert list(mkv_folder.iterdir()) == []
+
+
+def test_apply_triggers_jellyfin_rescan_when_configured(
+    client: TestClient,
+    mkv_folder: Path,
+    tmp_path: Path,
+    patched_pipeline: None,
+) -> None:
+    library_root = tmp_path / "out"
+    job_id = _start_scan(client, mkv_folder, library_root)
+
+    with patch(
+        "app.services.jobs.jellyfin.trigger_rescan",
+        return_value=jobs_service.jellyfin.JellyfinStatus.triggered(),
+    ) as triggered:
+        body = client.post(f"/jobs/{job_id}/apply", json={"confirm": True}).json()
+
+    triggered.assert_called_once()
+    assert body["jellyfin"]["state"] == "triggered"
+    assert body["jellyfin"]["detail"] is None
 
 
 def test_apply_before_completion_returns_409(client: TestClient) -> None:

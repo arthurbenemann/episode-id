@@ -25,6 +25,8 @@ play each one to figure out which episode it is.
   needed) and OpenSubtitles for everything else (free API key).
 - **SQLite transcript cache** — OpenSubtitles downloads are quota-limited,
   so fetched transcripts are cached and re-scans never re-download.
+- **Jellyfin auto-rescan** — set `JELLYFIN_URL` + `JELLYFIN_API_KEY` and a
+  library scan fires automatically after every successful Apply.
 - **One Docker image** — web UI by default, CLI included.
 
 ## Screenshots

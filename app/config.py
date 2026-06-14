@@ -40,6 +40,10 @@ class Settings(BaseSettings):
     opensubtitles_api_key: str | None = None
     tvdb_api_key: str | None = None
 
+    # Jellyfin auto-rescan after a successful apply. Both must be set.
+    jellyfin_url: str | None = None
+    jellyfin_api_key: str | None = None
+
     # Transcript cache (spec: cache aggressively, OpenSubtitles rate-limits)
     database_url: str = "sqlite:///./data/episode-id.db"
 
