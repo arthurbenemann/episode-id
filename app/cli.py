@@ -62,7 +62,8 @@ def _extract_samples(files: list[Path]) -> list[matcher.FileSample]:
                 continue
             if result is None:
                 console.print(
-                    f"[yellow]warn:[/] no text subtitles in {f.name} (PGS/VobSub OCR is M5)"
+                    f"[yellow]warn:[/] no readable subtitles in {f.name} "
+                    "(no text track, and PGS OCR produced nothing)"
                 )
                 continue
             dialogue = result.dialogue_after(

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "episode-id"
-version = "0.1.0"
+version = "0.2.0"
 description = "Identify TV episode MKVs by subtitle fuzzy-matching and rename them for Jellyfin"
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -19,6 +19,8 @@ dependencies = [
     "beautifulsoup4>=4.12",
     "lxml>=5.0",
     "pysubs2>=1.7",
+    "pytesseract>=0.3.10",
+    "pillow>=10.0",
     "rapidfuzz>=3.9",
     "scipy>=1.13",
     "typer>=0.12",

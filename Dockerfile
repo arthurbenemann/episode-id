@@ -1,10 +1,12 @@
 FROM python:3.12-slim AS base
 
-# System deps: ffmpeg for subtitle extraction. tesseract added later for M5
-# (PGS/VobSub OCR).
+# System deps: ffmpeg extracts subtitle streams; tesseract OCRs image-based
+# (PGS / Blu-ray) subtitles into text for matching.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         ffmpeg \
+        tesseract-ocr \
+        tesseract-ocr-eng \
         ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 

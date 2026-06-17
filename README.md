@@ -13,9 +13,9 @@ play each one to figure out which episode it is.
 ## Features
 
 - **Subtitle fingerprinting** — extracts the best English text track with
-  ffmpeg, fuzzy-matches dialogue against reference transcripts
-  (`rapidfuzz` + Hungarian assignment, so two files can't claim the same
-  episode).
+  ffmpeg (or OCRs image-based PGS tracks from Blu-ray rips via Tesseract),
+  fuzzy-matches dialogue against reference transcripts (`rapidfuzz` +
+  Hungarian assignment, so two files can't claim the same episode).
 - **Jellyfin-ready renames** — `Series (Year) [tvdbid-NNN]/Season XX/…`,
   reserved characters stripped, dry-run by default, never overwrites.
 - **Web UI** — scan a folder, watch progress, review confidence-scored
@@ -102,7 +102,7 @@ Everything the UI does is also plain HTTP — `POST /scan`,
 - [x] **M2** — FastAPI wrapper around the same logic
 - [x] **M3** — htmx web UI
 - [x] **M4** — OpenSubtitles provider (works beyond Trek)
-- [ ] **M5** — PGS / VobSub OCR for Blu-ray rips without text subs
+- [x] **M5** — PGS OCR for Blu-ray rips without text subs (VobSub/DVD still TODO)
 - [x] **M6** — CI/CD release pipeline publishing to ghcr.io
 
 See [docs/SPEC.md](docs/SPEC.md) for the full design.
