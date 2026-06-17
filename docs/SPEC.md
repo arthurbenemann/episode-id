@@ -157,7 +157,7 @@ episode-id/
 2. **M2 — FastAPI wrap.** Same logic behind `/scan` and `/results`. Test with curl.
 3. **M3 — Frontend.** htmx-driven UI: folder picker, show search, results table with confidence badges, Confirm button.
 4. **M4 — OpenSubtitles provider.** Generalize beyond Trek.
-5. **M5 — PGS/VobSub OCR.** Cover Blu-ray rips without text subs.
+5. **M5 — PGS OCR.** Blu-ray rips without text subs are rasterised and OCR'd via Tesseract (VobSub/DVD still TODO).
 6. **M6 — CI/CD + release pipeline.** ci.yml runs ruff + pytest, release.yml publishes to ghcr.io on tag.
 
 ## Gotchas

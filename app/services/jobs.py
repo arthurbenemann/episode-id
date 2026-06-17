@@ -179,9 +179,7 @@ def _execute(job: Job, store: JobStore) -> None:
             job.progress.files_done += 1
 
     if not samples:
-        raise ValueError(
-            "no usable text subtitles found in any file (PGS/VobSub OCR is a future milestone)"
-        )
+        raise ValueError("no readable subtitles found in any file (tried text tracks and PGS OCR)")
 
     with store._lock:
         job.progress.stage = STAGE_FETCHING

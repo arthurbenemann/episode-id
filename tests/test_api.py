@@ -257,4 +257,4 @@ def test_scan_failure_recorded_in_status(
 
     status = client.get(f"/jobs/{job_id}").json()
     assert status["status"] == "failed"
-    assert "no usable text subtitles" in (status["error"] or "")
+    assert "no readable subtitles" in (status["error"] or "")

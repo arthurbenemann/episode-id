@@ -1,7 +1,8 @@
 """Subtitle extraction from MKV files using ffprobe + ffmpeg.
 
-For M1 we only handle text-based subtitles (SRT, ASS, mov_text). PGS/VobSub
-support requires OCR and is deferred to M5.
+Text-based subtitles (SRT, ASS, mov_text) are read directly. Image-based PGS
+tracks (Blu-ray rips) are rasterised and OCR'd via Tesseract — see `pgs.py`.
+VobSub (dvd_subtitle) OCR is not handled yet.
 """
 
 from __future__ import annotations
@@ -14,13 +15,20 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import pysubs2
+import pytesseract
+from PIL import Image
+
+from app.core import pgs
 
 log = logging.getLogger(__name__)
 
 
-# Text-based subtitle codecs ffmpeg knows about. Image-based (hdmv_pgs_subtitle,
-# dvd_subtitle) are excluded because they require OCR.
+# Text-based subtitle codecs ffmpeg knows about — read directly, no OCR.
 TEXT_SUBTITLE_CODECS = {"subrip", "ass", "ssa", "mov_text", "webvtt", "text"}
+
+# Image-based codecs we can OCR. VobSub (dvd_subtitle) uses a different RLE and
+# an external palette, so it isn't supported yet.
+IMAGE_SUBTITLE_CODECS = {"hdmv_pgs_subtitle"}
 
 
 @dataclass(frozen=True)
@@ -36,6 +44,10 @@ class SubtitleStream:
     @property
     def is_text(self) -> bool:
         return self.codec in TEXT_SUBTITLE_CODECS
+
+    @property
+    def is_image(self) -> bool:
+        return self.codec in IMAGE_SUBTITLE_CODECS
 
 
 @dataclass(frozen=True)
@@ -115,24 +127,23 @@ def pick_best_stream(
 ) -> SubtitleStream | None:
     """Choose the best subtitle stream for matching.
 
-    Preference order:
-        1. text-based, preferred language, not forced
-        2. text-based, preferred language, forced (fallback)
-        3. text-based, any language, not forced
-        4. text-based, any language, forced
-    Returns None if no text-based stream exists.
+    Text tracks always beat image tracks: OCR is lossy, so we only fall back to
+    a PGS track when no text track exists. Within each kind we prefer the target
+    language and non-forced tracks. Returns None if there's no usable (text- or
+    image-based) subtitle stream.
     """
-    text_streams = [s for s in streams if s.is_text]
-    if not text_streams:
+    usable = [s for s in streams if s.is_text or s.is_image]
+    if not usable:
         return None
 
-    def score(s: SubtitleStream) -> tuple[int, int, int]:
+    def score(s: SubtitleStream) -> tuple[int, int, int, int]:
         # Lower is better.
+        kind = 0 if s.is_text else 1
         lang_match = 0 if s.language == preferred_language else 1
         forced_penalty = 1 if s.forced else 0
-        return (lang_match, forced_penalty, s.index)
+        return (kind, lang_match, forced_penalty, s.index)
 
-    return min(text_streams, key=score)
+    return min(usable, key=score)
 
 
 def extract_stream(mkv: Path, stream_index: int) -> list[pysubs2.SSAEvent]:
@@ -161,17 +172,65 @@ def extract_stream(mkv: Path, stream_index: int) -> list[pysubs2.SSAEvent]:
         out_path.unlink(missing_ok=True)
 
 
+def _ocr_image(image: Image.Image) -> str:
+    """OCR one caption image, collapsing Tesseract's stray whitespace."""
+    text = pytesseract.image_to_string(image, lang="eng", config="--psm 6")
+    return " ".join(text.split())
+
+
+def extract_image_stream(mkv: Path, stream_index: int) -> list[pysubs2.SSAEvent]:
+    """Extract a PGS (image) subtitle stream and OCR it into SSA events.
+
+    ffmpeg copies the raw PGS packets into a temporary `.sup` file, which we
+    rasterise (`pgs.parse_sup`) and OCR caption by caption. Captions that OCR to
+    nothing are dropped so they don't pollute the dialogue sample.
+    """
+    with tempfile.NamedTemporaryFile(suffix=".sup", delete=False) as tmp:
+        sup_path = Path(tmp.name)
+    try:
+        _run(
+            [
+                "ffmpeg",
+                "-y",
+                "-v",
+                "error",
+                "-i",
+                str(mkv),
+                "-map",
+                f"0:{stream_index}",
+                "-c:s",
+                "copy",
+                str(sup_path),
+            ]
+        )
+        events: list[pysubs2.SSAEvent] = []
+        for sub in pgs.parse_sup(sup_path.read_bytes()):
+            text = _ocr_image(sub.image)
+            if text:
+                events.append(pysubs2.SSAEvent(start=sub.start_ms, end=sub.end_ms, text=text))
+        return events
+    finally:
+        sup_path.unlink(missing_ok=True)
+
+
 def extract_subtitles(mkv: Path) -> ExtractedSubtitles | None:
     """High-level: probe an MKV, pick the best track, extract its events.
 
-    Returns None if the file has no text-based subtitle stream.
+    Prefers a text subtitle track; falls back to OCR of a PGS (image) track.
+    Returns None if there's no usable subtitle stream, or it yields no text.
     """
     streams = probe_subtitle_streams(mkv)
     chosen = pick_best_stream(streams)
     if chosen is None:
-        log.warning("no text-based subtitle stream in %s", mkv.name)
+        log.warning("no usable subtitle stream in %s", mkv.name)
         return None
-    events = extract_stream(mkv, chosen.index)
+    if chosen.is_text:
+        events = extract_stream(mkv, chosen.index)
+    else:
+        events = extract_image_stream(mkv, chosen.index)
+    if not events:
+        log.warning("subtitle track in %s produced no usable text", mkv.name)
+        return None
     return ExtractedSubtitles(source=mkv, stream=chosen, events=events)
 
 
