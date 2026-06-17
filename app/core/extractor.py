@@ -173,3 +173,14 @@ def extract_subtitles(mkv: Path) -> ExtractedSubtitles | None:
         return None
     events = extract_stream(mkv, chosen.index)
     return ExtractedSubtitles(source=mkv, stream=chosen, events=events)
+
+
+def find_mkv_files(folder: Path) -> list[Path]:
+    """Recursively collect `.mkv` files under `folder`, sorted for a stable order.
+
+    Disc rippers like ARM and MakeMKV write each disc into its own
+    subdirectory, so we walk the whole tree rather than just the top level.
+    The suffix match is case-insensitive so `.MKV` rips aren't missed, and
+    directories that happen to be named `*.mkv` are skipped.
+    """
+    return sorted(p for p in folder.rglob("*") if p.is_file() and p.suffix.lower() == ".mkv")

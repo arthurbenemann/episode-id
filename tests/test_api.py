@@ -52,6 +52,28 @@ def test_scan_runs_full_pipeline(
     assert status["progress"]["stage"] == "done"
 
 
+def test_scan_recurses_into_subfolders(
+    client: TestClient,
+    tmp_path: Path,
+    patched_pipeline: None,
+) -> None:
+    # ARM/MakeMKV layout: each disc in its own subfolder, no mkvs at the top.
+    src = tmp_path / "input"
+    (src / "disc1").mkdir(parents=True)
+    (src / "disc2").mkdir(parents=True)
+    (src / "disc1" / "t1.mkv").write_bytes(b"")
+    (src / "disc2" / "t2.mkv").write_bytes(b"")
+
+    job_id = _start_scan(client, src, tmp_path / "out")
+
+    status = client.get(f"/jobs/{job_id}").json()
+    assert status["status"] == "succeeded", status
+    assert status["progress"]["files_total"] == 2
+
+    body = client.get(f"/jobs/{job_id}/results").json()
+    assert {Path(m["source"]).name for m in body["matches"]} == {"t1.mkv", "t2.mkv"}
+
+
 def test_results_match_jellyfin_layout(
     client: TestClient,
     mkv_folder: Path,
