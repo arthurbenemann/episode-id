@@ -106,9 +106,14 @@ def get_results(job_id: str) -> JobResultsResponse:
 @router.post("/jobs/{job_id}/apply", response_model=ApplyResponse)
 def apply(job_id: str, body: ApplyRequest) -> ApplyResponse:
     try:
-        errors = jobs_service.apply_job(job_id, confirm=body.confirm)
+        result = jobs_service.apply_job(job_id, confirm=body.confirm)
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=f"job {exc.args[0]} not found") from exc
     except RuntimeError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
-    return ApplyResponse(job_id=job_id, applied=body.confirm, errors=errors)
+    return ApplyResponse(
+        job_id=job_id,
+        applied=body.confirm,
+        errors=result.errors,
+        jellyfin={"state": result.jellyfin.state, "detail": result.jellyfin.detail},
+    )

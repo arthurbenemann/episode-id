@@ -137,7 +137,7 @@ def ui_apply(
     confirm: bool = Form(False),
 ) -> HTMLResponse:
     try:
-        errors = jobs_service.apply_job(job_id, confirm=confirm)
+        result = jobs_service.apply_job(job_id, confirm=confirm)
     except KeyError:
         return _error(request, f"job {job_id} not found")
     except RuntimeError as exc:
@@ -149,7 +149,8 @@ def ui_apply(
         "_applied.html",
         {
             "applied": confirm,
-            "errors": errors,
+            "errors": result.errors,
+            "jellyfin": result.jellyfin,
             "total": len(job.results) if job else 0,
         },
     )

@@ -20,6 +20,7 @@ from app.config import settings
 from app.core import extractor, matcher, renamer
 from app.db import TranscriptCache
 from app.providers.registry import create_provider
+from app.services import jellyfin
 
 log = logging.getLogger(__name__)
 
@@ -250,17 +251,26 @@ def _execute(job: Job, store: JobStore) -> None:
         job.results = out
 
 
+@dataclass(frozen=True)
+class ApplyResult:
+    """What `apply_job` returns: per-file errors plus the Jellyfin outcome."""
+
+    errors: list[str]
+    jellyfin: jellyfin.JellyfinStatus
+
+
 def apply_job(
     job_id: str,
     *,
     confirm: bool,
     store: JobStore | None = None,
-) -> list[str]:
+) -> ApplyResult:
     """Apply the proposed renames for `job_id`.
 
     `confirm=False` is a dry-run — the renamer logs the moves but doesn't
-    touch the filesystem. Returns a list of per-file error strings (empty on
-    success).
+    touch the filesystem. On a fully successful confirmed apply, this also
+    pokes Jellyfin's `/Library/Refresh` if it's configured so the new files
+    show up without a manual scan.
     """
     store = store or _store
     job = store.get(job_id)
@@ -281,4 +291,13 @@ def apply_job(
         for m in job.results
     ]
     errors = renamer.apply_plans(plans, dry_run=not confirm)
-    return [f"{type(e).__name__}: {e}" for e in errors]
+    error_messages = [f"{type(e).__name__}: {e}" for e in errors]
+
+    # Only kick Jellyfin when files actually moved without failures —
+    # partial applies surface errors first; dry-runs don't change anything.
+    if confirm and not errors and plans:
+        jf = jellyfin.trigger_rescan()
+    else:
+        jf = jellyfin.JellyfinStatus.skipped()
+
+    return ApplyResult(errors=error_messages, jellyfin=jf)

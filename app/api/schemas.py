@@ -78,7 +78,16 @@ class ApplyRequest(BaseModel):
     )
 
 
+class JellyfinStatusModel(BaseModel):
+    state: str = Field(
+        ...,
+        description="'skipped' (not configured), 'triggered' (scan queued), or 'failed'.",
+    )
+    detail: str | None = None
+
+
 class ApplyResponse(BaseModel):
     job_id: str
     applied: bool
     errors: list[str]
+    jellyfin: JellyfinStatusModel

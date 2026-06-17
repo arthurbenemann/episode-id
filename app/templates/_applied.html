@@ -1,7 +1,14 @@
 <div id="apply-result" class="applied">
     {% if applied %}
         <h2><span class="outcome-icon">✓</span>Applied</h2>
-        <p>Moved {{ total - errors|length }} of {{ total }} file(s) into the library. Trigger a library scan in Jellyfin to pick them up.</p>
+        <p>Moved {{ total - errors|length }} of {{ total }} file(s) into the library.</p>
+        {% if jellyfin.state == "triggered" %}
+        <p class="muted">Jellyfin library scan triggered — new episodes should appear shortly.</p>
+        {% elif jellyfin.state == "failed" %}
+        <p class="muted">Jellyfin rescan failed ({{ jellyfin.detail }}). Trigger a scan from Jellyfin manually.</p>
+        {% else %}
+        <p class="muted">Trigger a library scan in Jellyfin to pick them up.</p>
+        {% endif %}
     {% else %}
         <h2><span class="outcome-icon">○</span>Dry-run</h2>
         <p>Nothing was moved. The table above is exactly what Apply would do.</p>
