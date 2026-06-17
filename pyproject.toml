@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "episode-id"
-version = "0.1.0"
+version = "0.2.0"
 description = "Identify TV episode MKVs by subtitle fuzzy-matching and rename them for Jellyfin"
 readme = "README.md"
 license = { file = "LICENSE" }
