@@ -154,9 +154,9 @@ def run_scan(job_id: str, store: JobStore | None = None) -> None:
 def _execute(job: Job, store: JobStore) -> None:
     req = job.request
 
-    files = sorted(p for p in req.folder.iterdir() if p.suffix.lower() == ".mkv")
+    files = extractor.find_mkv_files(req.folder)
     if not files:
-        raise ValueError(f"no .mkv files in {req.folder}")
+        raise ValueError(f"no .mkv files found under {req.folder}")
 
     with store._lock:
         job.progress.files_total = len(files)

@@ -57,8 +57,9 @@ cd episode-id
 docker compose up -d --build
 ```
 
-Open <http://localhost:8080>. Drop your rips in `./media/input` and point
-`./media/tv` at your Jellyfin TV library (override either with
+Open <http://localhost:8080>. Drop your rips in `./media/input`
+(subfolders are scanned recursively, so a per-disc ARM/MakeMKV layout
+works as-is) and point `./media/tv` at your Jellyfin TV library (override either with
 `MEDIA_INPUT` / `LIBRARY_ROOT`). The transcript cache persists in
 `./data/`.
 

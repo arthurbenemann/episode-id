@@ -43,9 +43,9 @@ def _setup_logging(verbose: bool) -> None:
 
 
 def _gather_files(folder: Path) -> list[Path]:
-    files = sorted(p for p in folder.iterdir() if p.suffix.lower() == ".mkv")
+    files = extractor.find_mkv_files(folder)
     if not files:
-        console.print(f"[red]No .mkv files found in {folder}[/red]")
+        console.print(f"[red]No .mkv files found under {folder}[/red]")
         raise typer.Exit(code=1)
     return files
 
@@ -159,7 +159,7 @@ def rename(
         exists=True,
         file_okay=False,
         dir_okay=True,
-        help="Folder containing MKV files to identify.",
+        help="Folder of MKV files to identify (subfolders are searched too).",
     ),
     show: str | None = typer.Option(
         None,
