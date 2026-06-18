@@ -91,29 +91,53 @@ class Job:
 
 
 class JobStore:
-    """Thread-safe in-memory job store.
+    """Single-job, thread-safe in-memory store.
 
-    BackgroundTasks runs sync handlers in a thread pool, so concurrent reads
-    from the API and writes from the worker have to be serialised.
+    The app operates on one set of files on disk, so only one scan makes sense
+    at a time. The store keeps the *current* job; callers refuse to start a new
+    one while it's still active. Keeping a single current job also lets a fresh
+    browser tab reconnect to the scan in flight (or its results) instead of
+    showing a blank form.
+
+    BackgroundTasks runs sync handlers in a thread pool, so reads from the API
+    and writes from the worker have to be serialised.
     """
 
     def __init__(self) -> None:
         self._jobs: dict[str, Job] = {}
+        self._current_id: str | None = None
         self._lock = threading.RLock()
 
     def create(self, request: ScanRequest) -> Job:
+        """Create a job and make it current, replacing any previous one."""
         job = Job(id=uuid.uuid4().hex, request=request)
         with self._lock:
-            self._jobs[job.id] = job
+            # One job at a time: drop the old one so we never accumulate state.
+            self._jobs = {job.id: job}
+            self._current_id = job.id
         return job
 
     def get(self, job_id: str) -> Job | None:
         with self._lock:
             return self._jobs.get(job_id)
 
+    def current(self) -> Job | None:
+        """The most recent job, whatever its status (None if there's been none)."""
+        with self._lock:
+            return self._jobs.get(self._current_id) if self._current_id else None
+
+    def active(self) -> Job | None:
+        """The current job if it's still pending or running, else None."""
+        with self._lock:
+            job = self._jobs.get(self._current_id) if self._current_id else None
+            if job is not None and job.status in (JobStatus.PENDING, JobStatus.RUNNING):
+                return job
+            return None
+
     def clear(self) -> None:
         with self._lock:
             self._jobs.clear()
+            self._current_id = None
 
 
 _store = JobStore()

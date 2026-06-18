@@ -52,6 +52,17 @@ def _error(request: Request, message: str) -> HTMLResponse:
     )
 
 
+def _job_fragment(request: Request, job: jobs_service.Job) -> HTMLResponse:
+    """Render the fragment that matches a job's state (progress/results/error)."""
+    if job.status == jobs_service.JobStatus.FAILED:
+        return _error(request, job.error or "job failed")
+    if job.status == jobs_service.JobStatus.SUCCEEDED:
+        return templates.TemplateResponse(
+            request, "_results.html", {"job": job, "matches": job.results}
+        )
+    return templates.TemplateResponse(request, "_progress.html", {"job": job})
+
+
 @router.get("/", response_class=HTMLResponse)
 def index(request: Request) -> HTMLResponse:
     return templates.TemplateResponse(
@@ -79,6 +90,12 @@ def ui_scan(
     include_provider_id: bool = Form(False),
     provider: str = Form("chakoteya"),
 ) -> HTMLResponse:
+    # One job at a time: if a scan is already running, reconnect to it rather
+    # than starting a second against the same set of files.
+    active = jobs_service.get_store().active()
+    if active is not None:
+        return _job_fragment(request, active)
+
     try:
         year_int = _parse_optional_int(year)
         tvdb_id_int = _parse_optional_int(tvdb_id)
@@ -119,15 +136,20 @@ def ui_progress(request: Request, job_id: str) -> HTMLResponse:
     job = jobs_service.get_store().get(job_id)
     if job is None:
         return _error(request, f"job {job_id} not found")
-    if job.status == jobs_service.JobStatus.FAILED:
-        return _error(request, job.error or "job failed")
-    if job.status == jobs_service.JobStatus.SUCCEEDED:
-        return templates.TemplateResponse(
-            request,
-            "_results.html",
-            {"job": job, "matches": job.results},
-        )
-    return templates.TemplateResponse(request, "_progress.html", {"job": job})
+    return _job_fragment(request, job)
+
+
+@router.get("/ui/job", response_class=HTMLResponse)
+def ui_current_job(request: Request) -> HTMLResponse:
+    """Fragment for the current job, or empty if there is none.
+
+    The index page loads this on open so a fresh tab reconnects to a scan
+    already in progress (or its finished results) rather than a blank panel.
+    """
+    job = jobs_service.get_store().current()
+    if job is None:
+        return HTMLResponse("")
+    return _job_fragment(request, job)
 
 
 @router.post("/ui/jobs/{job_id}/apply", response_class=HTMLResponse)

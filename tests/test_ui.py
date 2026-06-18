@@ -279,3 +279,57 @@ def test_static_css_is_served(client: TestClient) -> None:
     resp = client.get("/static/style.css")
     assert resp.status_code == 200
     assert "badge-green" in resp.text
+
+
+def _pending_job() -> jobs_service.Job:
+    """A job parked in PENDING — its background task never runs under TestClient."""
+    return jobs_service.get_store().create(
+        jobs_service.ScanRequest(folder=Path("/tmp"), series_key="tng", season=1, series_title="X")
+    )
+
+
+def test_index_job_panel_reconnects_on_load(client: TestClient) -> None:
+    panel = BeautifulSoup(client.get("/").text, "lxml").find(id="job")
+    assert panel is not None
+    assert panel.get("hx-get") == "/ui/job"
+    assert panel.get("hx-trigger") == "load"
+
+
+def test_ui_job_empty_when_no_active_job(client: TestClient) -> None:
+    resp = client.get("/ui/job")
+    assert resp.status_code == 200
+    assert resp.text.strip() == ""
+
+
+def test_ui_job_reconnects_to_running_job(client: TestClient) -> None:
+    job = _pending_job()
+    resp = client.get("/ui/job")
+    assert resp.status_code == 200
+    assert f'hx-get="/ui/jobs/{job.id}/progress"' in resp.text
+    assert 'hx-trigger="every 1s"' in resp.text
+
+
+def test_ui_job_reconnects_to_results(
+    client: TestClient,
+    mkv_folder: Path,
+    tmp_path: Path,
+    patched_pipeline: None,
+) -> None:
+    client.post("/ui/scan", data=_scan_form(mkv_folder, tmp_path / "out"))
+    # A fresh tab hitting the index panel sees the finished results, not a blank form.
+    panel = client.get("/ui/job")
+    assert panel.status_code == 200
+    assert BeautifulSoup(panel.text, "lxml").find("div", class_="results") is not None
+
+
+def test_second_scan_while_active_reconnects_instead_of_duplicating(
+    client: TestClient,
+    mkv_folder: Path,
+    tmp_path: Path,
+) -> None:
+    existing = _pending_job()
+    resp = client.post("/ui/scan", data=_scan_form(mkv_folder, tmp_path / "out"))
+    assert resp.status_code == 200
+    # Reconnected to the in-flight job; no new job replaced it.
+    assert f'hx-get="/ui/jobs/{existing.id}/progress"' in resp.text
+    assert jobs_service.get_store().current().id == existing.id

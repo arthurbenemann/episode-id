@@ -151,6 +151,28 @@ def test_scan_validates_folder(client: TestClient, tmp_path: Path) -> None:
     assert resp.status_code == 400
 
 
+def test_scan_409_when_a_job_is_active(
+    client: TestClient,
+    mkv_folder: Path,
+    tmp_path: Path,
+) -> None:
+    # A job parked in PENDING counts as active; a second scan must be refused.
+    jobs_service.get_store().create(
+        jobs_service.ScanRequest(folder=Path("/tmp"), series_key="tng", season=1, series_title="X")
+    )
+    resp = client.post(
+        "/scan",
+        json={
+            "folder": str(mkv_folder),
+            "series_key": "tng",
+            "season": 1,
+            "series_title": "Star Trek The Next Generation",
+        },
+    )
+    assert resp.status_code == 409
+    assert "already in progress" in resp.json()["detail"]
+
+
 def test_status_404_for_unknown_job(client: TestClient) -> None:
     assert client.get("/jobs/deadbeef").status_code == 404
     assert client.get("/jobs/deadbeef/results").status_code == 404

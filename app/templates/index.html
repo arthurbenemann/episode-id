@@ -81,7 +81,9 @@
     </fieldset>
 </form>
 
-<div id="job"></div>
+<!-- Reconnect to a scan already in progress (or its results) when the page
+     (re)loads — there's only ever one job at a time. -->
+<div id="job" hx-get="/ui/job" hx-trigger="load"></div>
 
 <script>
 // Prefill title/year/TVDB id when a Trek series is picked from the dropdown.

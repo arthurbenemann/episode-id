@@ -23,6 +23,13 @@ router = APIRouter()
 
 @router.post("/scan", response_model=ScanResponse, status_code=202)
 def scan(body: ScanRequestModel, background_tasks: BackgroundTasks) -> ScanResponse:
+    store = jobs_service.get_store()
+    active = store.active()
+    if active is not None:
+        raise HTTPException(
+            status_code=409,
+            detail=f"a scan is already in progress (job {active.id})",
+        )
     if not body.folder.exists() or not body.folder.is_dir():
         raise HTTPException(status_code=400, detail=f"folder not found: {body.folder}")
     if body.provider not in PROVIDER_NAMES:
@@ -47,7 +54,7 @@ def scan(body: ScanRequestModel, background_tasks: BackgroundTasks) -> ScanRespo
         include_provider_id=body.include_provider_id,
         provider=body.provider,
     )
-    job = jobs_service.get_store().create(req)
+    job = store.create(req)
     background_tasks.add_task(jobs_service.run_scan, job.id)
     return ScanResponse(job_id=job.id)
 
